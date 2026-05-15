@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Canon Budget</title>
+<meta name="description" content="Canon Budget — Perencana anggaran keluarga premium." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root{
+    --gold:#b8902a; --gold-soft:#c9a84c; --gold-deep:#8a6a1f;
+    --bg:#f6efe1;        /* champagne ivory */
+    --bg-2:#ede2c8;      /* deeper sand */
+    --surface:#fffaf0;   /* card surface */
+    --surface-2:#fcf4e2;
+    --ink:#2a2418;       /* main text */
+    --ink-soft:#5b4f37;
+    --line:rgba(184,144,42,0.25);
+    --line-soft:rgba(90,75,40,0.10);
+  }
+  html,body{background:var(--bg); color:var(--ink); font-family:'Inter','Segoe UI',sans-serif;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(212,175,55,0.20), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(184,144,42,0.18), transparent 60%),
+      radial-gradient(800px 500px at 50% 110%, rgba(212,175,55,0.10), transparent 60%),
+      linear-gradient(180deg,#faf3e2,#f4ead2 50%,#efe2c0);
+    min-height:100vh;
+  }
+  .serif{font-family:'Cormorant Garamond','Playfair Display',Georgia,serif;}
+  .glass{
+    background: linear-gradient(180deg, rgba(255,250,240,0.92), rgba(252,244,226,0.92));
+    border:1px solid var(--line);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 50px -22px rgba(90,70,20,0.30), inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+  .gold-text{
+    background: linear-gradient(180deg,#b8902a,#8a6a1f 60%,#6b4f10);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .btn-gold{
+    background: linear-gradient(180deg,#e9c971,#b8902a);
+    color:#2a1d05; border:1px solid #8a6a1f;
+    box-shadow: 0 8px 20px -8px rgba(184,144,42,0.55), inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .btn-gold:hover{filter:brightness(1.05);}
+  .btn-ghost{background:rgba(184,144,42,0.10); border:1px solid var(--line); color:var(--gold-deep);}
+  .btn-ghost:hover{background:rgba(184,144,42,0.18);}
+  .input{
+    background:rgba(255,255,255,0.85); border:1px solid var(--line);
+    color:var(--ink); border-radius:10px; padding:10px 12px; outline:none; width:100%;
+    transition: all .15s;
+  }
+  .input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(212,175,55,0.18);}
+  .chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px;
+    background:rgba(184,144,42,0.12); border:1px solid var(--line); font-size:11px; color:var(--gold-deep);}
+  .scroll-y{overflow-y:auto;}
+  .scroll-y::-webkit-scrollbar{width:6px;}
+  .scroll-y::-webkit-scrollbar-track{background:transparent;}
+  .scroll-y::-webkit-scrollbar-thumb{background:rgba(184,144,42,0.30); border-radius:10px;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--line), transparent);}
+  .cal-cell{aspect-ratio:1/1; border:1px solid var(--line-soft); border-radius:10px; padding:6px; font-size:11px; position:relative; background:rgba(255,255,255,0.6);}
+  .cal-cell.has-bill{background:linear-gradient(180deg, rgba(212,175,55,0.30), rgba(212,175,55,0.10)); border-color:rgba(184,144,42,0.55); box-shadow:inset 0 0 18px rgba(212,175,55,0.18);}
+  .cal-cell.has-income{background:linear-gradient(180deg, rgba(120,170,90,0.25), rgba(120,170,90,0.08)); border-color:rgba(120,170,90,0.5);}
+  .cal-cell.deficit{background:linear-gradient(180deg, rgba(220,90,80,0.22), rgba(220,90,80,0.08)); border-color:rgba(220,90,80,0.5);}
+  .cal-cell.today{outline:2px solid var(--gold);}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#2a2418; color:#f5e7a8; padding:12px 20px; border-radius:999px; border:1px solid var(--gold); box-shadow:0 20px 50px rgba(0,0,0,.3); z-index:1000; font-size:13px;}
+  /* sidebar */
+  .sidebar{position:sticky; top:0; height:100vh; width:240px; flex-shrink:0;
+    background: linear-gradient(180deg, rgba(255,250,240,0.95), rgba(243,232,200,0.95));
+    border-right:1px solid var(--line); backdrop-filter: blur(10px);}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; cursor:pointer; font-size:13px; color:var(--ink-soft); transition:all .15s;}
+  .nav-item:hover{background:rgba(184,144,42,0.10); color:var(--ink);}
+  .nav-item.active{background:linear-gradient(180deg, rgba(233,201,113,0.55), rgba(184,144,42,0.35)); color:#2a1d05; font-weight:700; border:1px solid var(--line);}
+  .nav-item .icn{font-size:16px; width:20px; text-align:center;}
+  /* mode pill */
+  .mode-pill{display:inline-flex; gap:4px; padding:4px; background:rgba(184,144,42,0.10); border:1px solid var(--line); border-radius:999px;}
+  .mode-pill button{padding:6px 12px; border-radius:999px; font-size:11px; color:var(--ink-soft); font-weight:600;}
+  .mode-pill button.on{background:linear-gradient(180deg,#e9c971,#b8902a); color:#2a1d05; box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
+  /* mobile sidebar */
+  @media(max-width:900px){
+    .sidebar{position:fixed; left:0; top:0; z-index:50; transform:translateX(-100%); transition:transform .25s;}
+    .sidebar.open{transform:translateX(0);}
+    .backdrop{position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:40;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useMemo, useRef } = React;
+const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Line, ComposedChart, Legend } = Recharts;
+
+// ---------- helpers ----------
+const fmt = (n) => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0);
+const fmtShort = (n) => {
+  const s = n<0?'-':''; n=Math.abs(n);
+  if(n>=1e9) return s+(n/1e9).toFixed(1)+'M';
+  if(n>=1e6) return s+(n/1e6).toFixed(1)+'jt';
+  if(n>=1e3) return s+(n/1e3).toFixed(0)+'k';
+  return s+String(n);
+};
+const dateOnly = (d)=>{const x=new Date(d); x.setHours(0,0,0,0); return x;};
+const addDays = (d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x;};
+const daysBetween = (a,b)=>Math.max(0, Math.round((dateOnly(b)-dateOnly(a))/86400000)+1);
+const iso = (d)=> new Date(d).toISOString().slice(0,10);
+const idDate = (d)=> new Date(d).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+const uid = ()=> Math.random().toString(36).slice(2,10);
+const ls = {
+  get:(k,fb)=>{try{return JSON.parse(localStorage.getItem('gbk_'+k))??fb}catch{return fb}},
+  set:(k,v)=>localStorage.setItem('gbk_'+k, JSON.stringify(v))
+};
+
+function useToast(){
+  const [msg,setMsg]=useState('');
+  const t=useRef();
+  const show=(m)=>{ setMsg(m); clearTimeout(t.current); t.current=setTimeout(()=>setMsg(''),2400); };
+  const node = msg ? <div className="toast">{msg}</div> : null;
+  return [show,node];
+}
+
+// ============ MAIN APP ============
+function App(){
+  const [toast, ToastNode] = useToast();
+  const [page, setPage] = useState(()=> ls.get('page','dashboard'));
+  const [navOpen, setNavOpen] = useState(false);
+  const [mode, setMode] = useState(()=> ls.get('mode','smoothing')); // segmented | smoothing | gabung
+
+  useEffect(()=>ls.set('page', page),[page]);
+  useEffect(()=>ls.set('mode', mode),[mode]);
+
+  const [incomes, setIncomes] = useState(()=> {
+    const saved = ls.get('incomes', null);
+    if(saved && saved.length){
+      return saved.map(i=> i.plans ? {
+        id:i.id, name:i.name,
+        amount: i.plans.reduce((s,p)=>s+(Number(p.amount)||0),0),
+        start: i.plans[0]?.start || iso(new Date()),
+        end: i.plans[i.plans.length-1]?.end || iso(addDays(new Date(),15))
+      } : i);
+    }
+    return [
+      { id: uid(), name:'Gaji', amount:1000000, receiveDay:1, start:iso(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end:iso(new Date(new Date().getFullYear(), new Date().getMonth(), 15)) },
+      { id: uid(), name:'Tunjangan', amount:3000000, receiveDay:16, start:iso(new Date(new Date().getFullYear(), new Date().getMonth(), 16)), end:iso(new Date(new Date().getFullYear(), new Date().getMonth()+1, 0)) }
+    ];
+  });
+
+  const [billTemplates, setBillTemplates] = useState(()=> ls.get('billTemplates', []));
+  const [bills, setBills] = useState(()=> ls.get('activeBills', []));
+  const [history, setHistory] = useState(()=> ls.get('history', []));
+  const [editingId, setEditingId] = useState(null);
+
+  useEffect(()=>ls.set('incomes', incomes),[incomes]);
+  useEffect(()=>ls.set('billTemplates', billTemplates),[billTemplates]);
+  useEffect(()=>ls.set('activeBills', bills),[bills]);
+  useEffect(()=>ls.set('history', history),[history]);
+
+  const addIncomeSource = ()=> setIncomes([...incomes, {
+    id: uid(), name:'Sumber Baru', amount:0, receiveDay:1,
+    start:iso(new Date()), end:iso(addDays(new Date(),15))
+  }]);
+  const removeIncome = (id)=> setIncomes(incomes.filter(i=>i.id!==id));
+  const updIncome = (id, patch)=> setIncomes(incomes.map(i=> i.id===id ? {...i, ...patch} : i));
+
+  const blankBill = ()=>({ id:uid(), name:'', amount:0, day:1, freq:0, _draft:true });
+  const addBill = (data)=> setBills([{...blankBill(), ...(data||{}), id:uid(), _draft: !data}, ...bills]);
+  const updBill = (id, patch)=> setBills(bills.map(b=> b.id===id ? {...b, ...patch} : b));
+  const removeBill = (id)=> setBills(bills.filter(b=>b.id!==id));
+  const saveBill = (id)=>{
+    const b = bills.find(x=>x.id===id);
+    if(!b.name || b.amount<=0){ toast('Lengkapi nama & jumlah dulu'); return; }
+    updBill(id,{_draft:false});
+    setEditingId(null);
+    const next = billTemplates.filter(t=> t.name.toLowerCase()!==b.name.toLowerCase());
+    next.unshift({ id:uid(), name:b.name, amount:b.amount, day:b.day, freq:b.freq });
+    setBillTemplates(next);
+    toast(`💾 "${b.name}" disimpan ke template`);
+  };
+  const useTemplate = (t)=>{ addBill({name:t.name, amount:t.amount, day:t.day, freq:t.freq, _draft:false}); toast('Template ditambahkan'); };
+  const removeTemplate = (id)=> setBillTemplates(billTemplates.filter(t=>t.id!==id));
+
+  // ============ SIMULATION (3 MODES) ============
+  const sim = useMemo(()=>{
+    const valid = incomes.filter(i=> Number(i.amount)>0 && i.start && i.end);
+    if(!valid.length) return null;
+    const start = new Date(Math.min(...valid.map(i=>+new Date(i.start))));
+    const end   = new Date(Math.max(...valid.map(i=>+new Date(i.end))));
+    const N = daysBetween(start,end);
+    if(N<=0) return null;
+
+    const perDay = Array.from({length:N},(_,i)=>({
+      date: addDays(start,i), bills:[], dailyAllow:0, billTotal:0, total:0,
+      sources:[], incomeIn:0, balance:0, deficit:false
+    }));
+
+    // expand bills
+    let totalBills = 0;
+    bills.filter(b=>!b._draft && b.amount>0).forEach(b=>{
+      let firstIdx = -1;
+      for(let i=0;i<N;i++){
+        if(perDay[i].date.getDate() === Number(b.day)){ firstIdx=i; break; }
+      }
+      if(firstIdx===-1) return;
+      const step = Number(b.freq)||0;
+      if(step===0){ perDay[firstIdx].bills.push(b); totalBills += Number(b.amount); }
+      else{
+        for(let i=firstIdx;i<N;i+=step){ perDay[i].bills.push(b); totalBills += Number(b.amount); }
+      }
+    });
+    perDay.forEach(d=> d.billTotal = d.bills.reduce((s,b)=>s+Number(b.amount),0));
+
+    let totalIncome = valid.reduce((s,i)=>s+Number(i.amount||0),0);
+
+    if(mode==='segmented'){
+      // each source funds only its own range
+      valid.forEach(inc=>{
+        const s = new Date(inc.start), e = new Date(inc.end);
+        const idxs = [];
+        perDay.forEach((d,i)=>{ if(d.date>=s && d.date<=e) idxs.push(i); });
+        const segBills = idxs.reduce((sum,i)=> sum + perDay[i].billTotal, 0);
+        const days = idxs.length || 1;
+        const segNet = Number(inc.amount) - segBills;
+        const daily = Math.max(0, Math.floor((segNet/days)/10000)*10000);
+        idxs.forEach(i=>{
+          perDay[i].dailyAllow += daily;
+          perDay[i].sources.push(inc.name);
+        });
+      });
+    } else if(mode==='gabung'){
+      // sum all, divide flat across full N
+      const net = totalIncome - totalBills;
+      const daily = Math.max(0, Math.floor((net/N)/10000)*10000);
+      perDay.forEach(d=>{ d.dailyAllow = daily; d.sources = valid.map(v=>v.name); });
+    } else {
+      // ===== smoothing =====
+      // daily allowance = (totalIncome - totalBills) / N (rata sebulan)
+      // tapi income masuk pada receiveDay. Track running balance utk deteksi defisit.
+      const net = totalIncome - totalBills;
+      const daily = Math.max(0, Math.floor((net/N)/10000)*10000);
+      perDay.forEach(d=>{ d.dailyAllow = daily; d.sources = valid.map(v=>v.name); });
+      // assign actual income inflow per receive day
+      valid.forEach(inc=>{
+        const recDay = Number(inc.receiveDay) || new Date(inc.start).getDate();
+        // find first index in perDay matching that day-of-month
+        let idx = perDay.findIndex(d=> d.date.getDate()===recDay);
+        if(idx<0) idx = 0;
+        perDay[idx].incomeIn += Number(inc.amount);
+      });
+      // running balance (starting from 0 — assume no buffer)
+      let bal = 0;
+      perDay.forEach(d=>{
+        bal += d.incomeIn;
+        bal -= d.dailyAllow + d.billTotal;
+        d.balance = bal;
+        d.deficit = bal < 0;
+      });
+    }
+
+    perDay.forEach(d=> d.total = d.dailyAllow + d.billTotal);
+
+    const net = totalIncome - totalBills;
+    const hardestDay = perDay.reduce((a,b)=> b.total>a.total?b:a, perDay[0]);
+    const biggestBill = bills.filter(b=>!b._draft).reduce((a,b)=> Number(b.amount)>(a?Number(a.amount):0)?b:a, null);
+    const billRatio = totalIncome>0 ? totalBills/totalIncome : 0;
+    const dailyAvg = perDay.reduce((s,d)=>s+d.dailyAllow,0)/N;
+
+    // smoothing-specific: compute talangan needed
+    let talangan = 0, talanganDay = null;
+    if(mode==='smoothing'){
+      let minBal = 0;
+      perDay.forEach(d=>{
+        if(d.balance < minBal){ minBal = d.balance; talanganDay = d.date; }
+      });
+      talangan = minBal < 0 ? Math.ceil(-minBal/10000)*10000 : 0;
+    }
+
+    return { start, end, N, totalIncome, totalBills, net, daily:dailyAvg, remainder:net-dailyAvg*N, perDay, hardestDay, biggestBill, billRatio, mode, talangan, talanganDay };
+  },[incomes, bills, mode]);
+
+  // ---------- text report ----------
+  const report = useMemo(()=>{
+    if(!sim) return '';
+    const lines = [];
+    const modeLabel = sim.mode==='smoothing'?'SMOOTHING (rata sebulan)':sim.mode==='gabung'?'GABUNG TOTAL':'SEGMENTED (per sumber)';
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('  GIBIKEY STUDIO — LAPORAN ANGGARAN');
+    lines.push(`  Mode: ${modeLabel}`);
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push(`📅 ${idDate(sim.start)}  →  ${idDate(sim.end)}  (${sim.N} hari)`);
+    lines.push('');
+    lines.push('💎 SUMBER PEMASUKAN');
+    incomes.forEach(i=>{
+      if(!(Number(i.amount)>0)) return;
+      lines.push(`• ${i.name} — cair tgl ${i.receiveDay||'-'} — ${fmt(i.amount)}`);
+    });
+    lines.push('');
+    lines.push('📊 RINGKASAN');
+    lines.push(`Total Pemasukan  : ${fmt(sim.totalIncome)}`);
+    lines.push(`Total Tagihan    : ${fmt(sim.totalBills)}  (${(sim.billRatio*100).toFixed(1)}%)`);
+    lines.push(`Jatah Harian Rata: ${fmt(sim.daily)}`);
+    lines.push(`Sisa Akhir       : ${fmt(sim.net - sim.daily*sim.N)}`);
+    if(sim.mode==='smoothing' && sim.talangan>0){
+      lines.push('');
+      lines.push('⚠️ DANA TALANGAN');
+      lines.push(`Butuh ${fmt(sim.talangan)} sebagai buffer awal.`);
+      lines.push(`(saldo terendah pada ${idDate(sim.talanganDay)})`);
+    }
+    lines.push('');
+    lines.push('🔥 INSIGHT');
+    lines.push(`Hari terberat   : ${idDate(sim.hardestDay.date)} (${fmt(sim.hardestDay.total)})`);
+    if(sim.biggestBill) lines.push(`Tagihan terbesar: ${sim.biggestBill.name} ${fmt(sim.biggestBill.amount)}`);
+    lines.push(`Rasio tagihan   : ${(sim.billRatio*100).toFixed(1)}% ${sim.billRatio>0.7?'⚠️ TINGGI':sim.billRatio>0.5?'⚡ Sedang':'✅ Sehat'}`);
+    lines.push('');
+    lines.push('📆 RINCIAN HARIAN');
+    sim.perDay.forEach(d=>{
+      const ds = new Date(d.date).toLocaleDateString('id-ID',{weekday:'short',day:'2-digit',month:'2-digit'});
+      let line = `${ds} │ Harian ${fmt(d.dailyAllow)}`;
+      if(d.incomeIn>0) line += ` │ +Income ${fmt(d.incomeIn)}`;
+      if(d.bills.length){
+        line += ` │ Tagihan ${fmt(d.billTotal)}`;
+        d.bills.forEach(b=> line += `\n         └ ${b.name} ${fmt(b.amount)}`);
+      }
+      if(sim.mode==='smoothing') line += ` │ Saldo ${fmt(d.balance)}${d.deficit?' ⚠️':''}`;
+      lines.push(line);
+    });
+    lines.push('');
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('Dibuat oleh Gibikey Studio ✨');
+    return lines.join('\n');
+  },[sim, incomes]);
+
+  const copyReport = ()=>{
+    if(!report) return toast('Belum ada simulasi');
+    navigator.clipboard.writeText(report).then(()=>toast('📋 Laporan disalin'));
+  };
+  const shareWA = ()=>{
+    if(!report) return toast('Belum ada simulasi');
+    const url = 'https://wa.me/?text='+encodeURIComponent(report);
+    window.open(url,'_blank');
+  };
+  const exportCSV = ()=>{
+    if(!sim) return toast('Belum ada simulasi');
+    const rows = [['Tanggal','Hari','Jatah Harian','Income Masuk','Total Tagihan','Detail Tagihan','Saldo']];
+    sim.perDay.forEach(d=>{
+      rows.push([
+        iso(d.date),
+        new Date(d.date).toLocaleDateString('id-ID',{weekday:'long'}),
+        d.dailyAllow, d.incomeIn||0, d.billTotal,
+        d.bills.map(b=>`${b.name}:${b.amount}`).join('; '),
+        d.balance||0
+      ]);
+    });
+    const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `gibikey-budget-${iso(sim.start)}_${iso(sim.end)}.csv`;
+    a.click();
+    toast('📂 CSV diunduh');
+  };
+  const saveSimulation = ()=>{
+    if(!sim) return toast('Belum ada simulasi');
+    const name = prompt('Nama simulasi:', 'Simulasi '+new Date().toLocaleDateString('id-ID'));
+    if(!name) return;
+    const item = { id:uid(), name, date:new Date().toISOString(), report, snapshot:{ incomes, bills, mode } };
+    setHistory([item, ...history]);
+    toast('💾 Simulasi tersimpan');
+  };
+  const loadSim = (h)=>{
+    if(!confirm('Muat ulang simulasi ini? Data saat ini akan diganti.')) return;
+    setIncomes(h.snapshot.incomes); setBills(h.snapshot.bills);
+    if(h.snapshot.mode) setMode(h.snapshot.mode);
+    setPage('dashboard');
+    toast('Dimuat: '+h.name);
+  };
+  const removeSim = (id)=> setHistory(history.filter(h=>h.id!==id));
+  const resetAll = ()=>{
+    if(!confirm('Hapus SEMUA data?')) return;
+    localStorage.clear(); location.reload();
+  };
+
+  const navItems = [
+    {id:'dashboard', label:'Dashboard', icn:'◆'},
+    {id:'kalender', label:'Kalender', icn:'▦'},
+    {id:'laporan', label:'Pratinjau Laporan', icn:'≡'},
+    {id:'riwayat', label:'Riwayat Simulasi', icn:'⟳'},
+  ];
+
+  const navTo = (id)=>{ setPage(id); setNavOpen(false); };
+
+  // swipe-left to close sidebar (mobile only)
+  const touchRef = useRef({x:0, y:0, active:false});
+  const onTouchStart = (e)=>{ const t=e.touches[0]; touchRef.current={x:t.clientX, y:t.clientY, active:true}; };
+  const onTouchMove = (e)=>{
+    if(!touchRef.current.active) return;
+    const t=e.touches[0];
+    const dx = t.clientX - touchRef.current.x;
+    const dy = Math.abs(t.clientY - touchRef.current.y);
+    if(dx < -50 && dy < 60){ setNavOpen(false); touchRef.current.active=false; }
+  };
+  const onTouchEnd = ()=>{ touchRef.current.active=false; };
+
+  return (
+    <div className="flex min-h-screen">
+      {navOpen && <div className="backdrop" onClick={()=>setNavOpen(false)} />}
+      <aside
+        className={`sidebar p-4 flex flex-col gap-2 ${navOpen?'open':''}`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="px-2 pb-3 mb-2 border-b" style={{borderColor:'var(--line)'}}>
+          <div className="chip mb-2">✦ Canon Budget</div>
+          <h1 className="serif text-2xl font-bold gold-text leading-tight">Canon Budget</h1>
+          <p className="text-[10px] mt-1" style={{color:'var(--ink-soft)'}}>Perencana anggaran premium</p>
+        </div>
+        {navItems.map(n=>(
+          <div key={n.id} className={`nav-item ${page===n.id?'active':''}`} onClick={()=>navTo(n.id)}>
+            <span className="icn">{n.icn}</span><span>{n.label}</span>
+          </div>
+        ))}
+        <div className="mt-auto pt-4 border-t" style={{borderColor:'var(--line)'}}>
+          <button onClick={resetAll} className="btn-ghost w-full text-xs px-3 py-2 rounded-lg">⟲ Reset Semua</button>
+          <p className="text-[10px] text-center mt-3" style={{color:'var(--ink-soft)'}}>WEALTH · DISCIPLINE · CLARITY</p>
+        </div>
+      </aside>
+
+      <main className="flex-1 min-w-0">
+        <header className="md:hidden flex items-center justify-between p-4 border-b" style={{borderColor:'var(--line)'}}>
+          <div className="serif text-xl gold-text font-bold">Canon Budget</div>
+          <button onClick={()=>setNavOpen(true)} className="btn-ghost px-3 py-2 rounded-lg text-sm">☰ Menu</button>
+        </header>
+
+        <div className="p-4 md:p-8 max-w-6xl mx-auto">
+          {/* Mode switch (always visible) */}
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Mode Simulasi</p>
+              <div className="mode-pill mt-1">
+                <button className={mode==='segmented'?'on':''} onClick={()=>setMode('segmented')}>Segmented</button>
+                <button className={mode==='smoothing'?'on':''} onClick={()=>setMode('smoothing')}>Smoothing ⭐</button>
+                <button className={mode==='gabung'?'on':''} onClick={()=>setMode('gabung')}>Gabung Total</button>
+              </div>
+            </div>
+            <p className="text-[11px] max-w-xs" style={{color:'var(--ink-soft)'}}>
+              {mode==='smoothing' && '⭐ Pemasukan cair sesuai tanggal asli, jatah harian dirata-ratakan sebulan penuh. Tool hitung dana talangan otomatis.'}
+              {mode==='segmented' && 'Tiap sumber hanya membiayai rentangnya sendiri.'}
+              {mode==='gabung' && 'Semua pemasukan dijumlah, dibagi rata sebulan penuh.'}
+            </p>
+          </div>
+
+          {page==='dashboard' && <DashboardPage
+            incomes={incomes} addIncomeSource={addIncomeSource} removeIncome={removeIncome} updIncome={updIncome}
+            bills={bills} setBills={setBills} updBill={updBill} removeBill={removeBill} saveBill={saveBill}
+            editingId={editingId} setEditingId={setEditingId}
+            billTemplates={billTemplates} useTemplate={useTemplate} removeTemplate={removeTemplate}
+            sim={sim} mode={mode}
+            shareWA={shareWA} copyReport={copyReport} exportCSV={exportCSV} saveSimulation={saveSimulation}
+          />}
+          {page==='kalender' && <KalenderPage sim={sim} />}
+          {page==='laporan' && <LaporanPage sim={sim} report={report} shareWA={shareWA} copyReport={copyReport} exportCSV={exportCSV} saveSimulation={saveSimulation} />}
+          {page==='riwayat' && <RiwayatPage history={history} loadSim={loadSim} removeSim={removeSim} toast={toast} />}
+
+          <footer className="text-center mt-12 pb-6">
+            <div className="divider mb-4" />
+            <p className="serif text-sm gold-text">Gibikey Studio</p>
+            <p className="text-[10px] mt-1 tracking-widest uppercase" style={{color:'var(--ink-soft)'}}>Wealth · Discipline · Clarity</p>
+          </footer>
+        </div>
+      </main>
+      {ToastNode}
+    </div>
+  );
+}
+
+// ============ DASHBOARD ============
+function DashboardPage({incomes, addIncomeSource, removeIncome, updIncome, bills, setBills, updBill, removeBill, saveBill, editingId, setEditingId, billTemplates, useTemplate, removeTemplate, sim, mode, shareWA, copyReport, exportCSV, saveSimulation}){
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* LEFT */}
+      <div className="lg:col-span-5 space-y-5">
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="serif text-2xl gold-text">Sumber Pemasukan</h3>
+            <button onClick={addIncomeSource} className="btn-gold text-xs px-3 py-2 rounded-lg font-bold">+ Sumber</button>
+          </div>
+          <div className="scroll-y space-y-4 pr-2" style={{maxHeight:'460px'}}>
+            {incomes.map(inc=>(
+              <div key={inc.id} className="rounded-xl p-3 border bg-white/60" style={{borderColor:'var(--line-soft)'}}>
+                <div className="flex gap-2 mb-3">
+                  <input className="input flex-1 font-bold" value={inc.name} onChange={e=>updIncome(inc.id,{name:e.target.value})} placeholder="Nama sumber (Gaji / Tunjangan)" />
+                  <button onClick={()=>removeIncome(inc.id)} className="btn-ghost px-3 rounded-lg">✕</button>
+                </div>
+                <input type="number" className="input mb-2" placeholder="Jumlah (Rp)" value={inc.amount||''} onChange={e=>updIncome(inc.id,{amount:Number(e.target.value)||0})} />
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Cair tgl</label>
+                    <input type="number" min="1" max="31" className="input text-xs" placeholder="1-31" value={inc.receiveDay||''} onChange={e=>updIncome(inc.id,{receiveDay:Number(e.target.value)||1})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Mulai</label>
+                    <input type="date" className="input text-xs" value={inc.start} onChange={e=>updIncome(inc.id,{start:e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Sampai</label>
+                    <input type="date" className="input text-xs" value={inc.end} onChange={e=>updIncome(inc.id,{end:e.target.value})} />
+                  </div>
+                </div>
+                {mode==='smoothing' && (
+                  <p className="text-[10px] mt-2" style={{color:'var(--ink-soft)'}}>💡 Mode Smoothing: rentang bisa diisi penuh sebulan agar pemasukan dibagi rata sebulan, tapi cair tetap di tgl {inc.receiveDay||'?'}.</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {billTemplates.length>0 && (
+          <section className="glass rounded-2xl p-5">
+            <h3 className="serif text-xl gold-text mb-3">Template Tagihan</h3>
+            <div className="scroll-y flex flex-wrap gap-2" style={{maxHeight:'140px'}}>
+              {billTemplates.map(t=>(
+                <div key={t.id} className="chip">
+                  <button onClick={()=>useTemplate(t)} className="hover:underline">{t.name} · {fmtShort(t.amount)}</button>
+                  <button onClick={()=>removeTemplate(t.id)} className="opacity-50 hover:opacity-100">×</button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="serif text-2xl gold-text">Tagihan</h3>
+            <button onClick={()=>{const id=uid(); setBills([{id, name:'', amount:0, day:1, freq:0, _draft:true}, ...bills]); setEditingId(id);}} className="btn-gold text-xs px-3 py-2 rounded-lg font-bold">+ Tagihan</button>
+          </div>
+          <div className="scroll-y space-y-2 pr-2" style={{maxHeight:'420px'}}>
+            {bills.length===0 && <p className="text-xs italic" style={{color:'var(--ink-soft)'}}>Belum ada tagihan. Tambahkan atau pilih dari template.</p>}
+            {bills.map(b=>{
+              const isEdit = b._draft || editingId===b.id;
+              return (
+                <div key={b.id} className="rounded-xl p-3 bg-white/70 border" style={{borderColor:'var(--line-soft)'}}>
+                  {isEdit ? (
+                    <div className="space-y-2">
+                      <input className="input" placeholder="Nama tagihan" value={b.name} onChange={e=>updBill(b.id,{name:e.target.value})} />
+                      <div className="grid grid-cols-12 gap-2">
+                        <input type="number" className="input col-span-6" placeholder="Jumlah (Rp)" value={b.amount||''} onChange={e=>updBill(b.id,{amount:Number(e.target.value)||0})} />
+                        <input type="number" min="1" max="31" className="input col-span-3" placeholder="Tgl" value={b.day||''} onChange={e=>updBill(b.id,{day:Number(e.target.value)||1})} title="Tanggal jatuh tempo" />
+                        <input type="number" min="0" className="input col-span-3" placeholder="Tiap" value={b.freq||0} onChange={e=>updBill(b.id,{freq:Number(e.target.value)||0})} title="Ulang tiap X hari (0=sekali)" />
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={()=>saveBill(b.id)} className="btn-gold flex-1 py-2 rounded-lg text-xs font-bold">💾 SIMPAN</button>
+                        <button onClick={()=>removeBill(b.id)} className="btn-ghost px-4 rounded-lg text-xs">Hapus</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold truncate">{b.name}</p>
+                        <p className="text-[11px]" style={{color:'var(--ink-soft)'}}>Tgl {b.day} · {b.freq>0?`tiap ${b.freq} hari`:'sekali'} · <span style={{color:'var(--gold-deep)', fontWeight:600}}>{fmt(b.amount)}</span></p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={()=>setEditingId(b.id)} className="btn-ghost px-3 py-2 rounded-lg text-xs">✎ Edit</button>
+                        <button onClick={()=>removeBill(b.id)} className="btn-ghost px-3 py-2 rounded-lg text-xs">✕</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      {/* RIGHT */}
+      <div className="lg:col-span-7 space-y-5">
+        {!sim && (
+          <div className="glass rounded-2xl p-12 text-center">
+            <div className="serif text-2xl gold-text mb-2">Mulai Simulasi</div>
+            <p className="text-sm" style={{color:'var(--ink-soft)'}}>Isi minimal 1 sumber pemasukan dengan jumlah &gt; 0.</p>
+          </div>
+        )}
+        {sim && <>
+          <section className="glass rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h3 className="serif text-2xl gold-text">Ringkasan</h3>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={shareWA} className="btn-gold text-xs px-3 py-2 rounded-lg font-bold">📱 WhatsApp</button>
+                <button onClick={copyReport} className="btn-ghost text-xs px-3 py-2 rounded-lg">📋 Copy</button>
+                <button onClick={exportCSV} className="btn-ghost text-xs px-3 py-2 rounded-lg">📂 CSV</button>
+                <button onClick={saveSimulation} className="btn-ghost text-xs px-3 py-2 rounded-lg">💾 Save</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                ['Pemasukan', sim.totalIncome],
+                ['Tagihan', sim.totalBills],
+                ['Harian Rata', sim.daily],
+                ['Sisa Akhir', sim.net - sim.daily*sim.N],
+              ].map(([l,v])=>(
+                <div key={l} className="rounded-xl p-3 border bg-white/60" style={{borderColor:'var(--line-soft)'}}>
+                  <p className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>{l}</p>
+                  <p className="serif text-xl gold-text mt-1">{fmt(v)}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] mt-3" style={{color:'var(--ink-soft)'}}>{idDate(sim.start)} → {idDate(sim.end)} · {sim.N} hari</p>
+            {sim.mode==='smoothing' && sim.talangan>0 && (
+              <div className="mt-3 p-3 rounded-xl border" style={{background:'rgba(220,90,80,0.10)', borderColor:'rgba(220,90,80,0.4)'}}>
+                <p className="text-xs font-bold" style={{color:'#a83229'}}>⚠️ Butuh dana talangan {fmt(sim.talangan)}</p>
+                <p className="text-[11px] mt-1" style={{color:'var(--ink-soft)'}}>Saldo terendah pada {idDate(sim.talanganDay)}. Sisihkan jumlah ini sebelum simulasi mulai agar awal bulan tidak defisit.</p>
+              </div>
+            )}
+          </section>
+
+          <section className="glass rounded-2xl p-5">
+            <h3 className="serif text-xl gold-text mb-3">Insight Pintar</h3>
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="rounded-xl p-3 bg-white/60 border" style={{borderColor:'var(--line-soft)'}}>
+                <p className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Hari Terberat</p>
+                <p className="serif text-lg mt-1">{idDate(sim.hardestDay.date)}</p>
+                <p className="text-xs gold-text">{fmt(sim.hardestDay.total)}</p>
+              </div>
+              <div className="rounded-xl p-3 bg-white/60 border" style={{borderColor:'var(--line-soft)'}}>
+                <p className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Tagihan Terbesar</p>
+                <p className="serif text-lg mt-1 truncate">{sim.biggestBill?.name||'—'}</p>
+                <p className="text-xs gold-text">{sim.biggestBill?fmt(sim.biggestBill.amount):'—'}</p>
+              </div>
+              <div className="rounded-xl p-3 bg-white/60 border" style={{borderColor:'var(--line-soft)'}}>
+                <p className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Rasio Tagihan</p>
+                <p className="serif text-lg mt-1">{(sim.billRatio*100).toFixed(1)}%</p>
+                <p className="text-xs" style={{color: sim.billRatio>0.7?'#a83229':sim.billRatio>0.5?'#8a6a1f':'#3d7a3d'}}>
+                  {sim.billRatio>0.7?'⚠️ Tinggi':sim.billRatio>0.5?'⚡ Sedang':'✅ Sehat'}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="glass rounded-2xl p-5">
+            <h3 className="serif text-xl gold-text mb-3">Grafik Pengeluaran Harian</h3>
+            <div style={{width:'100%', height:280}}>
+              <ResponsiveContainer>
+                <ComposedChart data={sim.perDay.map(d=>({date:new Date(d.date).toLocaleDateString('id-ID',{day:'2-digit',month:'short'}), total:d.total, billTotal:d.billTotal, balance:d.balance}))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(184,144,42,0.15)" />
+                  <XAxis dataKey="date" tick={{fill:'#5b4f37', fontSize:10}} />
+                  <YAxis tick={{fill:'#5b4f37', fontSize:10}} tickFormatter={fmtShort} />
+                  <Tooltip contentStyle={{background:'#fffaf0', border:'1px solid #b8902a', borderRadius:8, color:'#2a2418'}} formatter={(v)=>fmt(v)} />
+                  <Bar dataKey="total" radius={[6,6,0,0]}>
+                    {sim.perDay.map((d,i)=>(
+                      <Cell key={i} fill={d.billTotal>0 ? '#b8902a' : 'rgba(184,144,42,0.4)'} />
+                    ))}
+                  </Bar>
+                  {sim.mode==='smoothing' && <Line type="monotone" dataKey="balance" stroke="#3d7a3d" strokeWidth={2} dot={false} name="Saldo" />}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-[11px] mt-2" style={{color:'var(--ink-soft)'}}>Bar emas = ada tagihan. {sim.mode==='smoothing'&&'Garis hijau = saldo berjalan.'}</p>
+          </section>
+
+          <section className="glass rounded-2xl p-5">
+            <h3 className="serif text-xl gold-text mb-3">Rincian Harian</h3>
+            <div className="scroll-y rounded-xl border bg-white/40" style={{maxHeight:'480px', borderColor:'var(--line-soft)'}}>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0" style={{background:'rgba(243,232,200,0.95)', backdropFilter:'blur(6px)'}}>
+                  <tr className="text-left text-[11px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>
+                    <th className="px-3 py-2 font-medium">Tgl</th>
+                    <th className="px-3 py-2 font-medium">Harian</th>
+                    <th className="px-3 py-2 font-medium">Tagihan</th>
+                    {sim.mode==='smoothing' && <th className="px-3 py-2 font-medium text-right">Saldo</th>}
+                    {sim.mode!=='smoothing' && <th className="px-3 py-2 font-medium text-right">Total</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sim.perDay.map((d,idx)=>{
+                    const dd = String(d.date.getDate()).padStart(2,'0');
+                    const mm = String(d.date.getMonth()+1).padStart(2,'0');
+                    return (
+                      <tr key={idx} className="border-t align-top" style={{borderColor:'var(--line-soft)'}}>
+                        <td className="px-3 py-3 whitespace-nowrap font-medium">
+                          {dd}/{mm}
+                          {d.incomeIn>0 && <div className="text-[10px]" style={{color:'#3d7a3d'}}>+ {fmtShort(d.incomeIn)}</div>}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap" style={{color:'#3a6dc4'}}>{fmt(d.dailyAllow)}</td>
+                        <td className="px-3 py-3">
+                          {d.bills.length===0 ? <span className="opacity-30">—</span> :
+                            <div className="space-y-0.5">
+                              {d.bills.map((b,i)=>(
+                                <div key={i} className="text-[12px]" style={{color:'#a83229'}}>
+                                  {b.name||'(tanpa nama)'} <span className="opacity-80">({fmt(b.amount)})</span>
+                                </div>
+                              ))}
+                            </div>
+                          }
+                        </td>
+                        {sim.mode==='smoothing' ? (
+                          <td className="px-3 py-3 text-right font-bold whitespace-nowrap" style={{color: d.deficit?'#a83229':'#3d7a3d'}}>{fmt(d.balance)}</td>
+                        ) : (
+                          <td className="px-3 py-3 text-right font-bold whitespace-nowrap">{fmt(d.total)}</td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// ============ KALENDER PAGE ============
+function KalenderPage({sim}){
+  if(!sim) return <EmptyState msg="Buat simulasi dulu di Dashboard untuk melihat kalender." />;
+  const months = useMemo(()=>{
+    const map = new Map();
+    sim.perDay.forEach(d=>{
+      const key = `${d.date.getFullYear()}-${d.date.getMonth()}`;
+      if(!map.has(key)) map.set(key,{year:d.date.getFullYear(), month:d.date.getMonth(), days:[]});
+      map.get(key).days.push(d);
+    });
+    return [...map.values()];
+  },[sim]);
+  const today = dateOnly(new Date());
+  const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  return (
+    <div className="space-y-5">
+      <section className="glass rounded-2xl p-5">
+        <h2 className="serif text-3xl gold-text mb-2">Kalender Visual</h2>
+        <p className="text-sm" style={{color:'var(--ink-soft)'}}>Klik / hover hari untuk lihat detail tagihan & income.</p>
+        <div className="flex flex-wrap gap-3 mt-3 text-[11px]">
+          <span className="chip" style={{background:'rgba(212,175,55,0.30)'}}>● Ada tagihan</span>
+          <span className="chip" style={{background:'rgba(120,170,90,0.30)', color:'#3d7a3d'}}>● Income masuk</span>
+          {sim.mode==='smoothing' && <span className="chip" style={{background:'rgba(220,90,80,0.30)', color:'#a83229'}}>● Defisit</span>}
+        </div>
+      </section>
+
+      {months.map(m=>{
+        const first = new Date(m.year, m.month, 1);
+        const offset = first.getDay();
+        const total = new Date(m.year, m.month+1, 0).getDate();
+        const cells = [];
+        for(let i=0;i<offset;i++) cells.push(null);
+        for(let d=1; d<=total; d++){
+          const date = new Date(m.year, m.month, d);
+          const found = m.days.find(x=> x.date.getDate()===d);
+          cells.push({date, info:found});
+        }
+        return (
+          <section key={`${m.year}-${m.month}`} className="glass rounded-2xl p-5">
+            <p className="serif text-2xl gold-text mb-3">{first.toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</p>
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {dayNames.map(n=><div key={n} className="text-[11px] text-center font-bold" style={{color:'var(--ink-soft)'}}>{n}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {cells.map((c,i)=>{
+                if(!c) return <div key={i}/>;
+                const isToday = +dateOnly(c.date) === +today;
+                const has = c.info && c.info.bills.length>0;
+                const inc = c.info && c.info.incomeIn>0;
+                const def = c.info && c.info.deficit;
+                let cls = 'cal-cell';
+                if(def) cls += ' deficit';
+                else if(has) cls += ' has-bill';
+                else if(inc) cls += ' has-income';
+                if(isToday) cls += ' today';
+                return (
+                  <div key={i} className={cls} title={c.info ? [
+                    inc?`+ Income ${fmt(c.info.incomeIn)}`:'',
+                    has?c.info.bills.map(b=>`${b.name} ${fmt(b.amount)}`).join('\n'):''
+                  ].filter(Boolean).join('\n') : ''}>
+                    <div className="font-bold">{c.date.getDate()}</div>
+                    {inc && <div className="text-[9px] mt-0.5 font-bold" style={{color:'#3d7a3d'}}>+{fmtShort(c.info.incomeIn)}</div>}
+                    {has && <div className="text-[9px]" style={{color:'#8a6a1f', fontWeight:600}}>{fmtShort(c.info.billTotal)}</div>}
+                    {has && c.info.bills.length>1 && <div className="text-[8px]" style={{color:'var(--ink-soft)'}}>+{c.info.bills.length} item</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============ LAPORAN PAGE ============
+function LaporanPage({sim, report, shareWA, copyReport, exportCSV, saveSimulation}){
+  if(!sim) return <EmptyState msg="Buat simulasi dulu di Dashboard untuk melihat laporan." />;
+  return (
+    <div className="space-y-5">
+      <section className="glass rounded-2xl p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="serif text-3xl gold-text">Pratinjau Laporan</h2>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={shareWA} className="btn-gold text-xs px-3 py-2 rounded-lg font-bold">📱 WhatsApp</button>
+            <button onClick={copyReport} className="btn-ghost text-xs px-3 py-2 rounded-lg">📋 Copy</button>
+            <button onClick={exportCSV} className="btn-ghost text-xs px-3 py-2 rounded-lg">📂 CSV</button>
+            <button onClick={saveSimulation} className="btn-ghost text-xs px-3 py-2 rounded-lg">💾 Save</button>
+          </div>
+        </div>
+      </section>
+      <section className="glass rounded-2xl p-5">
+        <div className="scroll-y bg-white/70 rounded-xl p-5 border" style={{maxHeight:'70vh', borderColor:'var(--line-soft)'}}>
+          <pre className="text-xs whitespace-pre-wrap leading-relaxed font-mono" style={{color:'var(--ink)'}}>{report}</pre>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============ RIWAYAT PAGE ============
+function RiwayatPage({history, loadSim, removeSim, toast}){
+  return (
+    <div className="space-y-5">
+      <section className="glass rounded-2xl p-5">
+        <h2 className="serif text-3xl gold-text mb-2">Riwayat Simulasi</h2>
+        <p className="text-sm" style={{color:'var(--ink-soft)'}}>Simulasi yang pernah disimpan. Klik Muat untuk pakai ulang.</p>
+      </section>
+      <section className="glass rounded-2xl p-5">
+        {history.length===0 && <p className="text-sm italic text-center py-8" style={{color:'var(--ink-soft)'}}>Belum ada simulasi tersimpan. Simpan dari Dashboard atau Pratinjau Laporan.</p>}
+        <div className="scroll-y space-y-3 pr-2" style={{maxHeight:'70vh'}}>
+          {history.map(h=>(
+            <div key={h.id} className="flex items-center justify-between gap-2 p-4 rounded-xl bg-white/70 border" style={{borderColor:'var(--line-soft)'}}>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold truncate">{h.name}</p>
+                <p className="text-[11px]" style={{color:'var(--ink-soft)'}}>{new Date(h.date).toLocaleString('id-ID')}</p>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={()=>{navigator.clipboard.writeText(h.report); toast('📋 Disalin');}} className="btn-ghost px-3 py-2 rounded-lg text-xs">📋</button>
+                <button onClick={()=>loadSim(h)} className="btn-gold px-3 py-2 rounded-lg text-xs font-bold">↺ Muat</button>
+                <button onClick={()=>removeSim(h.id)} className="btn-ghost px-3 py-2 rounded-lg text-xs">✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EmptyState({msg}){
+  return (
+    <div className="glass rounded-2xl p-12 text-center">
+      <div className="serif text-2xl gold-text mb-2">Belum ada data</div>
+      <p className="text-sm" style={{color:'var(--ink-soft)'}}>{msg}</p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
