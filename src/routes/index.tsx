@@ -6,6 +6,10 @@ export const Route = createFileRoute("/")({
       { title: "Canon Budget" },
       { name: "description", content: "Canon Budget — Perencana anggaran keluarga premium." },
     ],
+    links: [
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
+    ],
   }),
   component: Index,
 });
