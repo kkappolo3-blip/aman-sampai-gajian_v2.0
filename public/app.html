@@ -729,24 +729,8 @@ function SimulasiPage({incomes, addIncomeSource, removeIncome, updIncome, bills,
         </div>
         <div className="space-y-2">
           {bills.length===0 && <p className="text-xs italic" style={{color:'var(--ink-soft)'}}>Belum ada tagihan. Tambahkan atau pilih dari template.</p>}
-          {bills.map(b=>{
-            const isEdit = b._draft || editingId===b.id;
-            return (
+          {bills.filter(b=>!b._draft).map(b=>(
               <div key={b.id} className="rounded-xl p-3 bg-white/70 border" style={{borderColor:'var(--line-soft)'}}>
-                {isEdit ? (
-                  <div className="space-y-2">
-                    <input className="input" placeholder="Nama tagihan" value={b.name} onChange={e=>updBill(b.id,{name:e.target.value})} />
-                    <div className="grid grid-cols-12 gap-2">
-                      <input type="number" className="input col-span-6" placeholder="Jumlah (Rp)" value={b.amount||''} onChange={e=>updBill(b.id,{amount:Number(e.target.value)||0})} />
-                      <input type="number" min="1" max="31" className="input col-span-3" placeholder="Tgl" value={b.day||''} onChange={e=>updBill(b.id,{day:Number(e.target.value)||1})} title="Tanggal jatuh tempo" />
-                      <input type="number" min="0" className="input col-span-3" placeholder="Tiap" value={b.freq||0} onChange={e=>updBill(b.id,{freq:Number(e.target.value)||0})} title="Ulang tiap X hari (0=sekali)" />
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button onClick={()=>saveBill(b.id)} className="btn-gold flex-1 py-2 rounded-lg text-xs font-bold">💾 SIMPAN</button>
-                      <button onClick={()=>removeBill(b.id)} className="btn-ghost px-4 rounded-lg text-xs">Hapus</button>
-                    </div>
-                  </div>
-                ) : (
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-bold truncate">{b.name}</p>
@@ -757,10 +741,8 @@ function SimulasiPage({incomes, addIncomeSource, removeIncome, updIncome, bills,
                       <button onClick={()=>removeBill(b.id)} className="btn-ghost px-3 py-2 rounded-lg text-xs">✕</button>
                     </div>
                   </div>
-                )}
               </div>
-            );
-          })}
+          ))}
         </div>
       </section>
 
@@ -770,6 +752,47 @@ function SimulasiPage({incomes, addIncomeSource, removeIncome, updIncome, bills,
           <p className="text-sm" style={{color:'var(--ink-soft)'}}>Isi minimal 1 sumber pemasukan dengan jumlah &gt; 0.</p>
         </div>
       )}
+
+      {/* POPUP TAGIHAN */}
+      {(() => {
+        const editing = bills.find(b=> b.id===editingId);
+        if(!editing) return null;
+        const close = ()=>{ if(editing._draft) removeBill(editing.id); else setEditingId(null); };
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{background:'rgba(20,15,5,0.55)', backdropFilter:'blur(4px)'}} onClick={close}>
+            <div className="glass rounded-2xl p-5 w-full max-w-md" onClick={e=>e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="serif text-xl gold-text">{editing._draft?'Tagihan Baru':'Edit Tagihan'}</h3>
+                <button onClick={close} className="btn-ghost px-3 py-1 rounded-lg text-sm">✕</button>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Nama</label>
+                  <input className="input" placeholder="cnth: Listrik" value={editing.name} onChange={e=>updBill(editing.id,{name:e.target.value})} autoFocus />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Jumlah (Rp)</label>
+                  <input type="number" className="input" placeholder="0" value={editing.amount||''} onChange={e=>updBill(editing.id,{amount:Number(e.target.value)||0})} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Tgl Jatuh Tempo</label>
+                    <input type="number" min="1" max="31" className="input" value={editing.day||''} onChange={e=>updBill(editing.id,{day:Number(e.target.value)||1})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Ulang tiap (hari)</label>
+                    <input type="number" min="0" className="input" placeholder="0 = sekali" value={editing.freq||0} onChange={e=>updBill(editing.id,{freq:Number(e.target.value)||0})} />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-3">
+                  <button onClick={()=>saveBill(editing.id)} className="btn-gold flex-1 py-2 rounded-lg text-sm font-bold">💾 Simpan</button>
+                  <button onClick={()=>{removeBill(editing.id); setEditingId(null);}} className="btn-ghost px-4 py-2 rounded-lg text-sm">Hapus</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
