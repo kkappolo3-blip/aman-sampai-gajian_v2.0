@@ -798,72 +798,55 @@ function SimulasiPage({incomes, addIncomeSource, removeIncome, updIncome, bills,
 }
 
 // ============ KALENDER PAGE ============
-function KalenderPage({sim}){
+function KalenderPage({sim, shareWA, copyReport, exportCSV}){
   if(!sim) return <EmptyState msg="Buat simulasi dulu di menu Simulasi." />;
   const today = dateOnly(new Date());
-  // group days by month
-  const months = useMemo(()=>{
-    const map = new Map();
-    sim.perDay.forEach(d=>{
-      const k = `${d.date.getFullYear()}-${d.date.getMonth()}`;
-      if(!map.has(k)) map.set(k,{year:d.date.getFullYear(), month:d.date.getMonth(), days:[]});
-      map.get(k).days.push(d);
-    });
-    return [...map.values()];
-  },[sim]);
-  const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const dayShort = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const monthShort = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   return (
     <div className="space-y-5">
       <section className="glass rounded-2xl p-5">
-        <h2 className="serif text-3xl gold-text mb-2">Kalender</h2>
-        <p className="text-sm" style={{color:'var(--ink-soft)'}}>Visual jatuh tempo tagihan & tanggal cair pemasukan.</p>
-        <div className="flex flex-wrap gap-3 mt-3 text-[11px]">
-          <span className="chip" style={{background:'rgba(212,175,55,0.30)'}}>● Ada tagihan</span>
-          <span className="chip" style={{background:'rgba(120,170,90,0.30)', color:'#3d7a3d'}}>● Income masuk</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <div>
+            <h2 className="serif text-3xl gold-text">Kalender Anggaran</h2>
+            <p className="text-xs mt-1" style={{color:'var(--ink-soft)'}}>Rincian harian: tagihan dipotong dulu, sisa = jatah harian (puluh ribu).</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={copyReport} className="btn-ghost px-3 py-2 rounded-lg text-xs font-semibold">📋 Salin</button>
+            <button onClick={exportCSV} className="btn-ghost px-3 py-2 rounded-lg text-xs font-semibold">⬇ CSV</button>
+            <button onClick={shareWA} className="btn-gold px-3 py-2 rounded-lg text-xs font-bold">💬 WhatsApp</button>
+          </div>
+        </div>
+        <div className="grid gap-3 mt-4" style={{gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))'}}>
+          {sim.perDay.map((d,idx)=>{
+            const isToday = +dateOnly(d.date) === +today;
+            return (
+              <div key={idx} className="rounded-xl p-3 bg-white/75 border flex flex-col" style={{borderColor: isToday?'var(--gold)':'var(--line-soft)', boxShadow: isToday?'0 0 0 2px rgba(212,175,55,0.35)':'none'}}>
+                <div className="flex items-start justify-between">
+                  <div className="serif text-2xl font-bold leading-none" style={{color:'var(--ink)'}}>{d.date.getDate()}</div>
+                  <div className="text-[10px] text-right" style={{color:'var(--ink-soft)'}}>{monthShort[d.date.getMonth()]} {dayShort[d.date.getDay()]}</div>
+                </div>
+                <div className="mt-2 text-[10px] uppercase tracking-widest" style={{color:'var(--ink-soft)'}}>Harian</div>
+                <div className="text-sm font-bold" style={{color:'#3a6dc4'}}>{fmt(d.dailyAllow)}</div>
+                {d.incomeIn>0 && (
+                  <div className="mt-1 text-[11px] font-semibold" style={{color:'#3d7a3d'}}>+ Income {fmtShort(d.incomeIn)}</div>
+                )}
+                {d.bills.length>0 && (
+                  <ul className="mt-2 space-y-0.5 flex-1">
+                    {d.bills.map((b,i)=>(
+                      <li key={i} className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="truncate flex items-center gap-1" style={{color:'var(--ink)'}}><span style={{color:'var(--gold)'}}>●</span>{b.name||'(tanpa nama)'}</span>
+                        <span className="font-semibold tabular-nums" style={{color:'var(--gold-deep)'}}>{fmtShort(b.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-2 pt-2 border-t text-right text-xs font-bold" style={{borderColor:'var(--line-soft)', color:'var(--gold-deep)'}}>{fmt(d.total)}</div>
+              </div>
+            );
+          })}
         </div>
       </section>
-      {months.map(m=>{
-        const first = new Date(m.year, m.month, 1);
-        const offset = first.getDay();
-        const total = new Date(m.year, m.month+1, 0).getDate();
-        const cells = [];
-        for(let i=0;i<offset;i++) cells.push(null);
-        for(let d=1; d<=total; d++){
-          const date = new Date(m.year, m.month, d);
-          const found = m.days.find(x=> x.date.getDate()===d);
-          cells.push({date, info:found});
-        }
-        return (
-          <section key={`${m.year}-${m.month}`} className="glass rounded-2xl p-5">
-            <p className="serif text-2xl gold-text mb-3">{first.toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</p>
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {dayNames.map(n=><div key={n} className="text-[11px] text-center font-bold" style={{color:'var(--ink-soft)'}}>{n}</div>)}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {cells.map((c,i)=>{
-                if(!c) return <div key={i}/>;
-                const isToday = +dateOnly(c.date) === +today;
-                const has = c.info && c.info.bills.length>0;
-                const inc = c.info && c.info.incomeIn>0;
-                let cls = 'cal-cell';
-                if(has) cls += ' has-bill';
-                else if(inc) cls += ' has-income';
-                if(isToday) cls += ' today';
-                return (
-                  <div key={i} className={cls} title={c.info ? [
-                    inc?`+ Income ${fmt(c.info.incomeIn)}`:'',
-                    has?c.info.bills.map(b=>`${b.name} ${fmt(b.amount)}`).join('\n'):''
-                  ].filter(Boolean).join('\n') : ''}>
-                    <div className="font-bold">{c.date.getDate()}</div>
-                    {inc && <div className="text-[9px] mt-0.5 font-bold" style={{color:'#3d7a3d'}}>+{fmtShort(c.info.incomeIn)}</div>}
-                    {has && <div className="text-[9px]" style={{color:'#8a6a1f', fontWeight:600}}>{fmtShort(c.info.billTotal)}</div>}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
     </div>
   );
 }
