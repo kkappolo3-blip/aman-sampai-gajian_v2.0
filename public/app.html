@@ -492,7 +492,7 @@ function App(){
             sim={sim}
             shareWA={shareWA} copyReport={copyReport} exportCSV={exportCSV} saveSimulation={saveSimulation}
           />}
-          {page==='kalender' && <KalenderPage sim={sim} />}
+          {page==='kalender' && <KalenderPage sim={sim} shareWA={shareWA} copyReport={copyReport} exportCSV={exportCSV} />}
           {page==='laporan' && <LaporanPage sim={sim} report={report} shareWA={shareWA} copyReport={copyReport} exportCSV={exportCSV} saveSimulation={saveSimulation} />}
           {page==='riwayat' && <RiwayatPage history={history} loadSim={loadSim} removeSim={removeSim} toast={toast} />}
 
